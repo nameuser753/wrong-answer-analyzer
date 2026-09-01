@@ -36,8 +36,9 @@ h1 { margin: 0; font: 700 35px/1.1 Georgia, "Noto Serif KR", serif; }
 .progress { display: flex; align-items: center; justify-content: center; margin: 40px 0 28px; }
 .progress-item { display: flex; align-items: center; gap: 8px; color: #8a928e; font-size: 14px; font-weight: 700; white-space: nowrap; }
 .progress-item span { display: grid; place-items: center; width: 29px; height: 29px; border: 1px solid #bdc3bf; border-radius: 50%; }
-.progress-item.active { color: var(--green); }
+.progress-item.active, .progress-item.complete { color: var(--green); }
 .progress-item.active span { color: white; border-color: var(--green); background: var(--green); }
+.progress-item.complete span { color: var(--green); border-color: var(--green); background: var(--green-pale); }
 .progress-line { width: 80px; height: 1px; margin: 0 12px; background: #c9ccc9; }
 
 .content-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
@@ -85,7 +86,17 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 .tip-card li::before { content: "✓"; position: absolute; left: 0; color: #e3b45d; font-weight: 900; }
 .result-card { border-top: 5px solid var(--amber); }
 .result-card h2 { margin-bottom: 18px; font-size: 22px; }
+.cause-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 20px; padding: 16px; border-radius: 10px; color: white; background: var(--green); }
+.cause-summary strong { font: 700 24px/1.2 Georgia, "Noto Serif KR", serif; }
+.cause-summary span { padding: 5px 9px; border-radius: 999px; color: var(--green-dark); background: #f3d99f; font-size: 11px; font-weight: 800; }
+.analysis-block { padding: 15px 0; border-top: 1px solid var(--line); }
+.analysis-block h3 { margin: 0 0 7px; color: var(--green); font-size: 13px; }
+.analysis-block p { margin: 0; color: #46524b; font-size: 13px; line-height: 1.6; }
+.action-block { margin-top: 2px; padding: 15px; border: 0; border-left: 4px solid var(--amber); background: #fff8e9; }
+.input-details { margin-top: 18px; font-size: 13px; }
+.input-details summary { color: var(--muted); font-weight: 750; cursor: pointer; }
 .result-card dl { display: grid; grid-template-columns: 70px 1fr; gap: 10px 12px; margin: 0; font-size: 13px; }
+.input-details dl { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .result-card dt { color: var(--muted); }
 .result-card dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
 .next-note { margin: 20px 0 0; padding: 13px; border-radius: 8px; color: var(--green-dark); background: var(--green-pale); font-size: 12px; line-height: 1.55; }
