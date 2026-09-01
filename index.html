@@ -19,7 +19,7 @@
           <h1>오답 탐정</h1>
           <p class="intro">틀린 이유를 기록하고, 다음에 공부할 방향을 찾아보세요.</p>
         </div>
-        <span class="step-badge">1단계 · 오답 등록</span>
+        <span id="step-badge" class="step-badge">1단계 · 오답 등록</span>
       </header>
 
       <section class="progress" aria-label="서비스 진행 단계">
@@ -30,6 +30,7 @@
         <div class="progress-item" data-step="3"><span>3</span>문제 추천</div>
       </section>
 
+      <section id="input-screen" class="screen active-screen">
       <div class="content-grid">
         <form id="wrong-answer-form" class="form-card">
           <div class="section-heading">
@@ -95,7 +96,8 @@
             </div>
           </fieldset>
 
-          <button class="primary-button" type="submit">오답 분석하기 <span aria-hidden="true">→</span></button>
+          <p id="form-message" class="form-message" role="alert" hidden></p>
+          <button id="analyze-button" class="primary-button" type="submit">AI로 오답 분석하기 <span aria-hidden="true">→</span></button>
         </form>
 
         <aside class="side-panel">
@@ -109,38 +111,58 @@
             </ul>
           </div>
 
-          <section id="result-card" class="result-card" aria-live="polite" hidden>
-            <p class="section-number">02 · 분석 결과</p>
-            <h2>이번 오답의 원인은</h2>
-            <div class="cause-summary">
-              <strong id="analysis-cause"></strong>
-              <span id="analysis-confidence"></span>
-            </div>
+        </aside>
+      </div>
+      </section>
 
+      <section id="analysis-screen" class="screen" hidden>
+        <div id="result-card" class="result-card result-page" aria-live="polite">
+          <p class="section-number">02 · GPT 분석 결과</p>
+          <h2>이번 오답의 원인은</h2>
+          <div class="cause-summary">
+            <strong id="analysis-cause"></strong>
+            <span id="analysis-confidence"></span>
+          </div>
+
+          <div class="analysis-layout">
             <div class="analysis-block">
               <h3>이렇게 판단했어요</h3>
               <p id="analysis-reason"></p>
             </div>
-
             <div class="analysis-block">
               <h3>확인할 개념</h3>
               <p id="analysis-concept"></p>
             </div>
-
             <div class="analysis-block action-block">
               <h3>다음 학습 행동</h3>
               <p id="analysis-action"></p>
             </div>
+          </div>
 
-            <details class="input-details">
-              <summary>입력한 정보 다시 보기</summary>
-              <dl id="result-list"></dl>
-            </details>
+          <details class="input-details">
+            <summary>입력한 정보 다시 보기</summary>
+            <dl id="result-list"></dl>
+          </details>
+          <p class="next-note">AI의 분석은 학습 보조용입니다. 중요한 내용은 교과서나 선생님의 설명으로 다시 확인하세요.</p>
+          <div class="screen-actions">
+            <button id="back-to-input" class="secondary-button" type="button">입력 수정하기</button>
+            <button id="go-to-recommendation" class="primary-button" type="button">추천 문제 보기 <span aria-hidden="true">→</span></button>
+          </div>
+        </div>
+      </section>
 
-            <p class="next-note">현재는 선택 항목을 기준으로 분석하는 규칙 기반 버전입니다.</p>
-          </section>
-        </aside>
-      </div>
+      <section id="recommendation-screen" class="screen" hidden>
+        <div id="recommendation-card" class="recommendation-card recommendation-page" aria-live="polite">
+          <p class="section-number">03 · AI 문제 추천</p>
+          <h2>이 문제들로 보완해 보세요</h2>
+          <p id="recommendation-reason" class="recommendation-reason"></p>
+          <div id="problem-list" class="problem-list"></div>
+          <div class="screen-actions">
+            <button id="back-to-analysis" class="secondary-button" type="button">분석 결과 보기</button>
+            <button id="start-over" class="primary-button" type="button">새 오답 등록하기 <span aria-hidden="true">↻</span></button>
+          </div>
+        </div>
+      </section>
     </main>
 
     <script src="script.js"></script>

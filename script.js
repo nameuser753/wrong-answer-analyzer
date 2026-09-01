@@ -2,84 +2,89 @@ const form = document.querySelector("#wrong-answer-form");
 const imageInput = document.querySelector("#problem-image");
 const uploadTitle = document.querySelector("#upload-title");
 const uploadHelp = document.querySelector("#upload-help");
+const analyzeButton = document.querySelector("#analyze-button");
+const formMessage = document.querySelector("#form-message");
 const resultCard = document.querySelector("#result-card");
 const resultList = document.querySelector("#result-list");
-const analysisCause = document.querySelector("#analysis-cause");
-const analysisConfidence = document.querySelector("#analysis-confidence");
-const analysisReason = document.querySelector("#analysis-reason");
-const analysisConcept = document.querySelector("#analysis-concept");
-const analysisAction = document.querySelector("#analysis-action");
+const recommendationCard = document.querySelector("#recommendation-card");
+const recommendationReason = document.querySelector("#recommendation-reason");
+const problemList = document.querySelector("#problem-list");
 const progressSteps = document.querySelectorAll(".progress-item");
+const screens = document.querySelectorAll(".screen");
+const stepBadge = document.querySelector("#step-badge");
 
-const analysisRules = {
-  "개념이 기억나지 않음": {
-    cause: "개념 이해 부족",
-    confidence: "높은 가능성",
-    reason: "풀이에 필요한 개념이 바로 떠오르지 않았다고 선택했기 때문이에요.",
-    action: "교과서의 핵심 개념과 대표 예제를 먼저 복습한 뒤, 같은 단원의 쉬운 문제부터 다시 풀어 보세요.",
-  },
-  "계산 실수": {
-    cause: "계산 실수",
-    confidence: "높은 가능성",
-    reason: "풀이 방법은 알고 있었지만 계산 과정에서 실수했다고 선택했기 때문이에요.",
-    action: "풀이의 계산 단계를 한 줄씩 분리해 쓰고, 부호·괄호·단위를 마지막에 한 번 더 확인해 보세요.",
-  },
-  "조건을 놓침": {
-    cause: "조건 해석 오류",
-    confidence: "높은 가능성",
-    reason: "문제에 제시된 조건을 놓쳤다고 선택했기 때문이에요.",
-    action: "문제에서 수치, 범위, 단위를 밑줄로 표시한 뒤 각 조건을 풀이에 사용했는지 확인해 보세요.",
-  },
-  "풀이 방법을 모름": {
-    cause: "풀이 전략 부족",
-    confidence: "높은 가능성",
-    reason: "문제를 시작할 풀이 방법을 찾지 못했다고 선택했기 때문이에요.",
-    action: "같은 유형의 대표 문제 풀이를 보고 첫 단계가 무엇인지 정리한 다음, 숫자만 바꾼 문제를 풀어 보세요.",
-  },
-  "풀이 누락": {
-    cause: "풀이 과정 누락",
-    confidence: "높은 가능성",
-    reason: "풀이를 끝까지 작성하지 못했다고 선택했기 때문이에요.",
-    action: "답을 구한 뒤에도 식, 근거, 단위를 모두 썼는지 확인하는 마무리 체크를 해 보세요.",
-  },
-  "기타": {
-    cause: "추가 확인 필요",
-    confidence: "판단 보류",
-    reason: "선택한 정보만으로는 대표 오답 유형을 정확히 정하기 어려워요.",
-    action: "틀린 풀이와 정답 풀이를 한 단계씩 비교해 처음 달라진 지점을 찾아 적어 보세요.",
-  },
-};
+document.querySelector("#back-to-input").addEventListener("click", () => showScreen(1));
+document.querySelector("#go-to-recommendation").addEventListener("click", () => showScreen(3));
+document.querySelector("#back-to-analysis").addEventListener("click", () => showScreen(2));
+document.querySelector("#start-over").addEventListener("click", () => {
+  form.reset();
+  uploadTitle.textContent = "문제 이미지 추가";
+  uploadHelp.textContent = "사진을 선택하거나 촬영해 주세요 (선택)";
+  showScreen(1);
+});
 
 imageInput.addEventListener("change", () => {
   const file = imageInput.files[0];
   if (!file) return;
 
+  if (!file.type.startsWith("image/")) {
+    imageInput.value = "";
+    showError("이미지 파일만 선택할 수 있어요.");
+    return;
+  }
+
+  if (file.size > 4 * 1024 * 1024) {
+    imageInput.value = "";
+    showError("문제 이미지는 4MB 이하로 선택해 주세요.");
+    return;
+  }
+
+  hideError();
   uploadTitle.textContent = file.name;
-  uploadHelp.textContent = "이미지가 선택되었습니다. 다시 누르면 변경할 수 있어요.";
+  uploadHelp.textContent = "이미지가 선택되었습니다. GPT가 문제 내용을 함께 확인합니다.";
 });
 
-form.addEventListener("submit", (event) => {
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  hideError();
+  setLoading(true);
 
-  const selectedSituation = form.querySelector('input[name="situation"]:checked');
-  const wrongAnswer = {
-    subject: document.querySelector("#subject").value,
-    unit: document.querySelector("#unit").value.trim(),
-    problemType: document.querySelector("#problem-type").value.trim(),
-    userAnswer: document.querySelector("#user-answer").value.trim(),
-    correctAnswer: document.querySelector("#correct-answer").value.trim(),
-    situation: selectedSituation.value,
-    imageName: imageInput.files[0]?.name || "등록하지 않음",
-  };
+  try {
+    const selectedSituation = form.querySelector('input[name="situation"]:checked');
+    const wrongAnswer = {
+      subject: document.querySelector("#subject").value,
+      unit: document.querySelector("#unit").value.trim(),
+      problemType: document.querySelector("#problem-type").value.trim(),
+      userAnswer: document.querySelector("#user-answer").value.trim(),
+      correctAnswer: document.querySelector("#correct-answer").value.trim(),
+      situation: selectedSituation.value,
+      imageName: imageInput.files[0]?.name || "등록하지 않음",
+      imageDataUrl: imageInput.files[0] ? await fileToDataUrl(imageInput.files[0]) : null,
+    };
 
-  console.log("등록된 오답 정보:", wrongAnswer);
+    const response = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(wrongAnswer),
+    });
+    const payload = await response.json();
 
-  const analysis = analysisRules[wrongAnswer.situation];
-  analysisCause.textContent = analysis.cause;
-  analysisConfidence.textContent = analysis.confidence;
-  analysisReason.textContent = `${analysis.reason} 내 답(${wrongAnswer.userAnswer})과 정답(${wrongAnswer.correctAnswer})이 달라진 과정을 함께 비교하면 원인을 더 정확히 찾을 수 있어요.`;
-  analysisConcept.textContent = `${wrongAnswer.subject}의 ‘${wrongAnswer.unit}’ 단원 중 ${wrongAnswer.problemType} 문제에 필요한 핵심 개념과 풀이 순서를 다시 확인해 보세요.`;
-  analysisAction.textContent = analysis.action;
+    if (!response.ok) throw new Error(payload.error || "AI 분석 중 문제가 발생했습니다.");
+    renderAnalysis(payload, wrongAnswer);
+  } catch (error) {
+    showError(error.message);
+  } finally {
+    setLoading(false);
+  }
+});
+
+function renderAnalysis(result, wrongAnswer) {
+  document.querySelector("#analysis-cause").textContent = result.cause;
+  document.querySelector("#analysis-confidence").textContent = result.confidence;
+  document.querySelector("#analysis-reason").textContent = result.reason;
+  document.querySelector("#analysis-concept").textContent = result.concept;
+  document.querySelector("#analysis-action").textContent = result.action;
+  recommendationReason.textContent = result.recommendationReason;
 
   const labels = {
     subject: "과목",
@@ -92,19 +97,81 @@ form.addEventListener("submit", (event) => {
   };
 
   resultList.replaceChildren();
-  Object.entries(wrongAnswer).forEach(([key, value]) => {
+  Object.entries(labels).forEach(([key, label]) => {
     const term = document.createElement("dt");
     const description = document.createElement("dd");
-    term.textContent = labels[key];
-    description.textContent = value;
+    term.textContent = label;
+    description.textContent = wrongAnswer[key];
     resultList.append(term, description);
   });
 
-  resultCard.hidden = false;
-  progressSteps.forEach((step) => {
-    step.classList.remove("active", "complete");
-    if (step.dataset.step === "1") step.classList.add("complete");
-    if (step.dataset.step === "2") step.classList.add("active");
+  problemList.replaceChildren();
+  result.problems.forEach((problem, index) => {
+    const article = document.createElement("article");
+    article.className = "problem-item";
+
+    const head = document.createElement("div");
+    head.className = "problem-head";
+    const title = document.createElement("h3");
+    title.textContent = `${index + 1}. ${problem.title}`;
+    const difficulty = document.createElement("span");
+    difficulty.className = "difficulty";
+    difficulty.textContent = problem.difficulty;
+    head.append(title, difficulty);
+
+    const question = document.createElement("p");
+    question.className = "problem-question";
+    question.textContent = problem.question;
+
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    summary.textContent = "힌트와 정답 확인";
+    const solution = document.createElement("p");
+    solution.textContent = `힌트: ${problem.hint}\n\n정답: ${problem.answer}\n\n해설: ${problem.explanation}`;
+    details.append(summary, solution);
+    article.append(head, question, details);
+    problemList.append(article);
   });
-  resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
-});
+
+  showScreen(2);
+}
+
+function showScreen(stepNumber) {
+  const screenIds = ["input-screen", "analysis-screen", "recommendation-screen"];
+  const badgeLabels = ["1단계 · 오답 등록", "2단계 · 원인 분석", "3단계 · 문제 추천"];
+
+  screens.forEach((screen) => {
+    screen.hidden = screen.id !== screenIds[stepNumber - 1];
+  });
+  progressSteps.forEach((step) => {
+    const value = Number(step.dataset.step);
+    step.classList.toggle("active", value === stepNumber);
+    step.classList.toggle("complete", value < stepNumber);
+  });
+  stepBadge.textContent = badgeLabels[stepNumber - 1];
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function setLoading(isLoading) {
+  analyzeButton.disabled = isLoading;
+  analyzeButton.firstChild.textContent = isLoading ? "GPT가 분석하고 있어요... " : "AI로 오답 분석하기 ";
+}
+
+function showError(message) {
+  formMessage.textContent = message;
+  formMessage.hidden = false;
+}
+
+function hideError() {
+  formMessage.hidden = true;
+  formMessage.textContent = "";
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("이미지를 읽지 못했습니다."));
+    reader.readAsDataURL(file);
+  });
+}
