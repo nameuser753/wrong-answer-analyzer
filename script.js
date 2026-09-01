@@ -129,13 +129,22 @@ function renderAnalysis(result, wrongAnswer) {
     question.className = "problem-question";
     question.textContent = problem.question;
 
-    const details = document.createElement("details");
-    const summary = document.createElement("summary");
-    summary.textContent = "힌트와 정답 확인";
+    const hintDetails = document.createElement("details");
+    hintDetails.className = "hint-details";
+    const hintSummary = document.createElement("summary");
+    hintSummary.textContent = "힌트 보기";
+    const hint = document.createElement("p");
+    hint.textContent = problem.hint;
+    hintDetails.append(hintSummary, hint);
+
+    const answerDetails = document.createElement("details");
+    answerDetails.className = "answer-details";
+    const answerSummary = document.createElement("summary");
+    answerSummary.textContent = "정답과 해설 보기";
     const solution = document.createElement("p");
-    solution.textContent = `힌트: ${problem.hint}\n\n정답: ${problem.answer}\n\n해설: ${problem.explanation}`;
-    details.append(summary, solution);
-    article.append(head, question, details);
+    solution.textContent = `정답: ${problem.answer}\n\n해설: ${problem.explanation}`;
+    answerDetails.append(answerSummary, solution);
+    article.append(head, question, hintDetails, answerDetails);
     problemList.append(article);
   });
 

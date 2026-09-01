@@ -30,5 +30,20 @@ node server.mjs
 - AI가 오답 원인, 판단 이유, 확인할 개념, 다음 학습 행동 표시
 - 취약점을 보완하는 새 연습 문제 3개와 힌트·정답·해설 생성
 - 오답 입력, 분석 결과, 추천 문제를 각각 독립된 화면으로 전환
+- 추천 문제의 힌트와 정답·해설을 별도 버튼으로 확인
+
+## Supabase 문제 데이터베이스 준비
+
+1. Supabase에서 새 프로젝트를 만듭니다.
+2. 프로젝트의 SQL Editor를 열고 `supabase-schema.sql` 전체를 실행합니다.
+3. Project Settings의 API 화면에서 Project URL과 Publishable key를 확인합니다.
+4. `.env`에 아래 두 항목을 추가합니다.
+
+```text
+SUPABASE_URL=https://프로젝트ID.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_실제키
+```
+
+`supabase-schema.sql`은 `problems` 테이블, 읽기 전용 RLS 정책, 테스트용 이차방정식 문제 3개를 만듭니다. Publishable key는 RLS와 함께 읽기 전용으로 사용하며, Secret key나 Service Role key는 브라우저에 노출하면 안 됩니다.
 
 OpenAI Responses API와 `gpt-5.4-mini`를 사용합니다. 분석 결과는 학습 보조용이며, 중요한 내용은 교과서나 선생님의 설명으로 다시 확인해야 합니다. 입력 내용은 현재 데이터베이스에 저장되지 않습니다.
