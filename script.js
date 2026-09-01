@@ -67,7 +67,13 @@ form.addEventListener("submit", async (event) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(wrongAnswer),
     });
-    const payload = await response.json();
+    const responseText = await response.text();
+    let payload;
+    try {
+      payload = JSON.parse(responseText);
+    } catch {
+      throw new Error("GPT 서버와 연결되지 않았습니다. server.mjs로 실행했는지 확인해 주세요.");
+    }
 
     if (!response.ok) throw new Error(payload.error || "AI 분석 중 문제가 발생했습니다.");
     renderAnalysis(payload, wrongAnswer);
