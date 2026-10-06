@@ -64,7 +64,7 @@ async function handleAnalysis(request, response) {
         `학생의 답과 풀이: ${clean(body.userAnswer, 1500)}`,
         `정답: ${clean(body.correctAnswer, 1000)}`,
         `학생이 선택한 상황: ${clean(body.situation, 100)}`,
-        "위 정보를 분석하고, 같은 약점을 보완하는 새 연습 문제 3개를 쉬움·보통·응용 순서로 만들어 주세요.",
+        "위 정보를 분석하고, 데이터베이스에서 같은 약점을 보완할 문제를 찾기 위한 핵심 검색어를 제시해 주세요.",
       ].join("\n"),
     },
   ];
@@ -83,7 +83,7 @@ async function handleAnalysis(request, response) {
       model,
       store: false,
       reasoning: { effort: "low" },
-      instructions: "당신은 한국 중·고등학생의 오답을 분석하는 학습 코치입니다. 학생의 답과 정답을 비교하되 정보가 부족하면 단정하지 마세요. 문제 이미지가 있으면 이미지의 문제 내용과 풀이도 확인하세요. 설명은 정확하고 친절한 한국어로 작성하세요. 추천 문제는 저작권이 있는 문제를 복사하지 말고 새로 만드세요. 각 추천 문제의 정답과 짧고 검증 가능한 해설을 제공하세요.",
+      instructions: "당신은 한국 중·고등학생의 오답을 분석하는 학습 코치입니다. 학생의 답과 정답을 비교하되 정보가 부족하면 단정하지 마세요. 문제 이미지가 있으면 이미지의 문제 내용과 풀이도 확인하세요. 설명은 정확하고 친절한 한국어로 작성하세요. 문제를 새로 만들지 말고, 별도의 공개 문제 데이터베이스를 검색하는 데 사용할 짧고 구체적인 한국어 핵심어를 제시하세요.",
       input: [{ role: "user", content }],
       max_output_tokens: 2500,
       text: {
@@ -101,26 +101,14 @@ async function handleAnalysis(request, response) {
               concept: { type: "string" },
               action: { type: "string" },
               recommendationReason: { type: "string" },
-              problems: {
+              recommendationKeywords: {
                 type: "array",
-                minItems: 3,
-                maxItems: 3,
-                items: {
-                  type: "object",
-                  additionalProperties: false,
-                  properties: {
-                    title: { type: "string" },
-                    difficulty: { type: "string", enum: ["쉬움", "보통", "응용"] },
-                    question: { type: "string" },
-                    hint: { type: "string" },
-                    answer: { type: "string" },
-                    explanation: { type: "string" },
-                  },
-                  required: ["title", "difficulty", "question", "hint", "answer", "explanation"],
-                },
+                minItems: 2,
+                maxItems: 6,
+                items: { type: "string" },
               },
             },
-            required: ["cause", "confidence", "reason", "concept", "action", "recommendationReason", "problems"],
+            required: ["cause", "confidence", "reason", "concept", "action", "recommendationReason", "recommendationKeywords"],
           },
         },
       },
@@ -148,7 +136,103 @@ async function handleAnalysis(request, response) {
     return;
   }
 
-  sendJson(response, 200, JSON.parse(outputText));
+  const analysis = JSON.parse(outputText);
+
+  try {
+    analysis.problems = await recommendProblems(body, analysis);
+  } catch (error) {
+    console.error("Supabase recommendation error:", error.message);
+    sendJson(response, 502, {
+      error: "오답 분석은 완료했지만 데이터베이스에서 추천 문제를 가져오지 못했습니다.",
+    });
+    return;
+  }
+
+  delete analysis.recommendationKeywords;
+  sendJson(response, 200, analysis);
+}
+
+async function recommendProblems(input, analysis) {
+  const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
+  const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase 환경변수가 설정되지 않았습니다.");
+  }
+
+  const fields = "code,unit,problem_type,difficulty,question,hint,answer,explanation,tags,source_name,source_url,license";
+  const databaseResponse = await fetch(`${supabaseUrl}/rest/v1/problems?select=${fields}&limit=500`, {
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${supabaseKey}`,
+    },
+  });
+
+  if (!databaseResponse.ok) {
+    throw new Error(`Supabase 요청 실패 (${databaseResponse.status})`);
+  }
+
+  const problems = await databaseResponse.json();
+  if (!Array.isArray(problems) || problems.length < 3) {
+    throw new Error("추천할 문제가 3개 미만입니다.");
+  }
+
+  const keywords = [
+    clean(input.unit, 100),
+    clean(input.problemType, 100),
+    clean(analysis.concept, 200),
+    ...(analysis.recommendationKeywords || []),
+  ]
+    .flatMap(tokenize)
+    .filter((word, index, all) => word.length > 1 && all.indexOf(word) === index);
+
+  return problems
+    .map((problem) => ({ problem, score: scoreProblem(problem, keywords, input) }))
+    .sort((a, b) => b.score - a.score || a.problem.code.localeCompare(b.problem.code))
+    .slice(0, 3)
+    .map(({ problem }, index) => ({
+      title: `${problem.unit} · 추천 ${index + 1}`,
+      difficulty: problem.difficulty,
+      question: problem.question,
+      hint: problem.hint,
+      answer: problem.answer,
+      explanation: problem.explanation,
+      sourceName: problem.source_name,
+      sourceUrl: problem.source_url,
+      license: problem.license,
+    }));
+}
+
+function scoreProblem(problem, keywords, input) {
+  const unit = normalizeText(problem.unit);
+  const type = normalizeText(problem.problem_type);
+  const searchable = normalizeText([
+    problem.unit,
+    problem.problem_type,
+    problem.question,
+    ...(problem.tags || []),
+  ].join(" "));
+  let score = 0;
+
+  if (unit === normalizeText(input.unit)) score += 40;
+  if (type === normalizeText(input.problemType)) score += 20;
+  for (const keyword of keywords) {
+    const normalized = normalizeText(keyword);
+    if (unit.includes(normalized)) score += 8;
+    else if (type.includes(normalized)) score += 5;
+    else if (searchable.includes(normalized)) score += 2;
+  }
+  return score;
+}
+
+function tokenize(value) {
+  return String(value || "")
+    .split(/[\s,·/()]+/)
+    .map((word) => word.replace(/[^0-9A-Za-z가-힣]/g, ""))
+    .filter(Boolean);
+}
+
+function normalizeText(value) {
+  return String(value || "").toLowerCase().replace(/\s+/g, "");
 }
 
 async function serveStatic(request, response) {

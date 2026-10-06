@@ -28,7 +28,7 @@ node server.mjs
 - `오답 분석하기` 버튼을 누르면 입력 결과 표시
 - GPT가 입력한 답안과 문제 이미지를 함께 분석
 - AI가 오답 원인, 판단 이유, 확인할 개념, 다음 학습 행동 표시
-- 취약점을 보완하는 새 연습 문제 3개와 힌트·정답·해설 생성
+- GPT 분석 결과와 가까운 공개 문제 3개를 Supabase에서 검색해 추천
 - 오답 입력, 분석 결과, 추천 문제를 각각 독립된 화면으로 전환
 - 추천 문제의 힌트와 정답·해설을 별도 버튼으로 확인
 
@@ -44,7 +44,7 @@ SUPABASE_URL=https://프로젝트ID.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_실제키
 ```
 
-`supabase-schema.sql`은 `problems` 테이블, 읽기 전용 RLS 정책, 테스트용 이차방정식 문제 3개를 만듭니다. Publishable key는 RLS와 함께 읽기 전용으로 사용하며, Secret key나 Service Role key는 브라우저에 노출하면 안 됩니다.
+`supabase-schema.sql`은 `problems` 테이블, 읽기 전용 RLS 정책, 테스트용 이차방정식 문제 3개를 만듭니다. 서버는 GPT가 반환한 취약 개념과 검색어를 이용해 이 테이블의 문제를 채점하고 가장 가까운 3개를 고릅니다. GPT가 문제를 새로 생성하지 않습니다. Publishable key는 RLS와 함께 읽기 전용으로 사용하며, Secret key나 Service Role key는 브라우저에 노출하면 안 됩니다.
 
 문제 출처를 추적하기 위해 `source_name`, `source_author`, `source_url`, `license`, `attribution` 열도 포함합니다. OER Commons 자료는 페이지마다 라이선스와 실제 제공자가 다르므로, CC BY 또는 퍼블릭 도메인으로 명확히 표시되고 문제 본문을 확인할 수 있는 자료만 가져와야 합니다. 현재 SQL에는 이 과정을 확인하기 위한 CC BY 벡터 문제 샘플 1개가 포함되어 있습니다.
 
