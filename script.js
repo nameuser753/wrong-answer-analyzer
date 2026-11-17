@@ -24,7 +24,6 @@ document.querySelector("#go-to-recommendation").addEventListener("click", () => 
 document.querySelector("#back-to-analysis").addEventListener("click", () => showScreen(2));
 refreshRecommendationsButton.addEventListener("click", loadMoreRecommendations);
 difficultySelect.addEventListener("change", () => {
-  seenProblemCodes = new Set();
   loadMoreRecommendations();
 });
 document.querySelector("#start-over").addEventListener("click", () => {
