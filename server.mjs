@@ -22,6 +22,10 @@ const server = createServer(async (request, response) => {
       await handleAnalysis(request, response);
       return;
     }
+    if (request.method === "POST" && request.url === "/api/recommend") {
+      await handleRecommendation(request, response);
+      return;
+    }
 
     if (request.method !== "GET" && request.method !== "HEAD") {
       sendJson(response, 405, { error: "지원하지 않는 요청입니다." });
@@ -152,7 +156,30 @@ async function handleAnalysis(request, response) {
   sendJson(response, 200, analysis);
 }
 
-async function recommendProblems(input, analysis) {
+async function handleRecommendation(request, response) {
+  const body = await readJsonBody(request, 1024 * 1024);
+  if (typeof body.unit !== "string" || typeof body.problemType !== "string" || typeof body.concept !== "string") {
+    sendJson(response, 400, { error: "추천에 필요한 정보가 부족합니다." });
+    return;
+  }
+
+  try {
+    const problems = await recommendProblems(
+      body,
+      { concept: body.concept, recommendationKeywords: [] },
+      {
+        difficulty: body.difficulty,
+        excludeCodes: Array.isArray(body.excludeCodes) ? body.excludeCodes : [],
+      },
+    );
+    sendJson(response, 200, { problems });
+  } catch (error) {
+    console.error("Supabase recommendation error:", error.message);
+    sendJson(response, 502, { error: "데이터베이스에서 다른 문제를 가져오지 못했습니다." });
+  }
+}
+
+async function recommendProblems(input, analysis, options = {}) {
   const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
   const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY;
   if (!supabaseUrl || !supabaseKey) {
@@ -185,13 +212,22 @@ async function recommendProblems(input, analysis) {
     .flatMap(tokenize)
     .filter((word, index, all) => word.length > 1 && all.indexOf(word) === index);
 
+  const excluded = new Set(options.excludeCodes || []);
+  const selectedDifficulty = ["쉬움", "보통", "어려움"].includes(options.difficulty)
+    ? options.difficulty
+    : "전체";
+
   return problems
-    .map((problem) => ({ problem, score: scoreProblem(problem, keywords, input) }))
+    .filter((problem) => !excluded.has(problem.code))
+    .map((problem) => ({ problem, difficulty: inferDifficulty(problem) }))
+    .filter((item) => selectedDifficulty === "전체" || item.difficulty === selectedDifficulty)
+    .map((item) => ({ ...item, score: scoreProblem(item.problem, keywords, input) }))
     .sort((a, b) => b.score - a.score || a.problem.code.localeCompare(b.problem.code))
     .slice(0, 3)
-    .map(({ problem }, index) => ({
+    .map(({ problem, difficulty }, index) => ({
+      code: problem.code,
       title: `${problem.unit} · 추천 ${index + 1}`,
-      difficulty: problem.difficulty,
+      difficulty,
       question: problem.question,
       hint: problem.hint,
       answer: problem.answer,
@@ -233,6 +269,18 @@ function tokenize(value) {
 
 function normalizeText(value) {
   return String(value || "").toLowerCase().replace(/\s+/g, "");
+}
+
+function inferDifficulty(problem) {
+  const question = String(problem.question || "");
+  let complexity = 0;
+  complexity += Math.min(3, (question.match(/\^/g) || []).length);
+  complexity += Math.min(2, (question.match(/\\frac|\\sqrt/g) || []).length * 2);
+  complexity += Math.min(2, (question.match(/[(){}]/g) || []).length / 2);
+  complexity += question.length > 45 ? 2 : question.length > 25 ? 1 : 0;
+  if (complexity <= 1) return "쉬움";
+  if (complexity <= 3) return "보통";
+  return "어려움";
 }
 
 async function serveStatic(request, response) {

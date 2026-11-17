@@ -98,8 +98,9 @@ async function recommendProblems(input, analysis) {
   return problems.map((problem) => ({ problem, score: scoreProblem(problem, keywords, input) }))
     .sort((a, b) => b.score - a.score || a.problem.code.localeCompare(b.problem.code)).slice(0, 3)
     .map(({ problem }, index) => ({
+      code: problem.code,
       title: `${problem.unit} · 추천 ${index + 1}`,
-      difficulty: problem.difficulty, question: problem.question, hint: problem.hint,
+      difficulty: inferDifficulty(problem), question: problem.question, hint: problem.hint,
       answer: problem.answer, explanation: problem.explanation,
       sourceName: problem.source_name, sourceUrl: problem.source_url, license: problem.license,
     }));
@@ -123,3 +124,15 @@ function tokenize(value) {
 }
 function normalize(value) { return String(value || "").toLowerCase().replace(/\s+/g, ""); }
 function clean(value, max) { return value.trim().slice(0, max); }
+
+function inferDifficulty(problem) {
+  const question = String(problem.question || "");
+  let complexity = 0;
+  complexity += Math.min(3, (question.match(/\^/g) || []).length);
+  complexity += Math.min(2, (question.match(/\\frac|\\sqrt/g) || []).length * 2);
+  complexity += Math.min(2, (question.match(/[(){}]/g) || []).length / 2);
+  complexity += question.length > 45 ? 2 : question.length > 25 ? 1 : 0;
+  if (complexity <= 1) return "쉬움";
+  if (complexity <= 3) return "보통";
+  return "어려움";
+}

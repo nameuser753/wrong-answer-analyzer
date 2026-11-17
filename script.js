@@ -9,17 +9,33 @@ const resultList = document.querySelector("#result-list");
 const recommendationCard = document.querySelector("#recommendation-card");
 const recommendationReason = document.querySelector("#recommendation-reason");
 const problemList = document.querySelector("#problem-list");
+const difficultySelect = document.querySelector("#recommendation-difficulty");
+const refreshRecommendationsButton = document.querySelector("#refresh-recommendations");
+const recommendationMessage = document.querySelector("#recommendation-message");
 const progressSteps = document.querySelectorAll(".progress-item");
 const screens = document.querySelectorAll(".screen");
 const stepBadge = document.querySelector("#step-badge");
+let latestWrongAnswer = null;
+let latestAnalysis = null;
+let seenProblemCodes = new Set();
 
 document.querySelector("#back-to-input").addEventListener("click", () => showScreen(1));
 document.querySelector("#go-to-recommendation").addEventListener("click", () => showScreen(3));
 document.querySelector("#back-to-analysis").addEventListener("click", () => showScreen(2));
+refreshRecommendationsButton.addEventListener("click", loadMoreRecommendations);
+difficultySelect.addEventListener("change", () => {
+  seenProblemCodes = new Set();
+  loadMoreRecommendations();
+});
 document.querySelector("#start-over").addEventListener("click", () => {
   form.reset();
   uploadTitle.textContent = "문제 이미지 추가";
   uploadHelp.textContent = "사진을 선택하거나 촬영해 주세요 (선택)";
+  difficultySelect.value = "전체";
+  latestWrongAnswer = null;
+  latestAnalysis = null;
+  seenProblemCodes = new Set();
+  hideRecommendationMessage();
   showScreen(1);
 });
 
@@ -85,6 +101,9 @@ form.addEventListener("submit", async (event) => {
 });
 
 function renderAnalysis(result, wrongAnswer) {
+  latestWrongAnswer = wrongAnswer;
+  latestAnalysis = result;
+  seenProblemCodes = new Set();
   document.querySelector("#analysis-cause").textContent = result.cause;
   document.querySelector("#analysis-confidence").textContent = result.confidence;
   document.querySelector("#analysis-reason").textContent = result.reason;
@@ -111,8 +130,14 @@ function renderAnalysis(result, wrongAnswer) {
     resultList.append(term, description);
   });
 
+  renderProblems(result.problems);
+  showScreen(2);
+}
+
+function renderProblems(problems) {
   problemList.replaceChildren();
-  result.problems.forEach((problem, index) => {
+  problems.forEach((problem, index) => {
+    if (problem.code) seenProblemCodes.add(problem.code);
     const article = document.createElement("article");
     article.className = "problem-item";
 
@@ -148,8 +173,58 @@ function renderAnalysis(result, wrongAnswer) {
     problemList.append(article);
   });
 
-  renderMath(resultCard, problemList);
-  showScreen(2);
+  renderMath(problemList);
+}
+
+async function loadMoreRecommendations() {
+  if (!latestWrongAnswer || !latestAnalysis) return;
+
+  setRecommendationLoading(true);
+  hideRecommendationMessage();
+  try {
+    const response = await fetch("/api/recommend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        unit: latestWrongAnswer.unit,
+        problemType: latestWrongAnswer.problemType,
+        concept: latestAnalysis.concept,
+        difficulty: difficultySelect.value,
+        excludeCodes: [...seenProblemCodes],
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "다른 문제를 가져오지 못했습니다.");
+
+    if (!payload.problems.length) {
+      showRecommendationMessage("선택한 난이도에서 더 보여드릴 문제가 없어요. 다른 난이도를 골라 주세요.");
+      return;
+    }
+    renderProblems(payload.problems);
+    showRecommendationMessage(`${difficultySelect.value === "전체" ? "새로운" : difficultySelect.value} 문제 ${payload.problems.length}개를 가져왔어요.`);
+  } catch (error) {
+    showRecommendationMessage(error.message, true);
+  } finally {
+    setRecommendationLoading(false);
+  }
+}
+
+function setRecommendationLoading(isLoading) {
+  refreshRecommendationsButton.disabled = isLoading;
+  difficultySelect.disabled = isLoading;
+  refreshRecommendationsButton.firstChild.textContent = isLoading ? "문제를 찾고 있어요... " : "다른 문제 더 받기 ";
+}
+
+function showRecommendationMessage(message, isError = false) {
+  recommendationMessage.textContent = message;
+  recommendationMessage.hidden = false;
+  recommendationMessage.classList.toggle("error", isError);
+}
+
+function hideRecommendationMessage() {
+  recommendationMessage.hidden = true;
+  recommendationMessage.textContent = "";
+  recommendationMessage.classList.remove("error");
 }
 
 function renderMath(...containers) {

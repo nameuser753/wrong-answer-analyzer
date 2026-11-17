@@ -156,6 +156,21 @@
           <p class="section-number">03 · AI 문제 추천</p>
           <h2>이 문제들로 보완해 보세요</h2>
           <p id="recommendation-reason" class="recommendation-reason"></p>
+          <div class="recommendation-controls" aria-label="추천 문제 설정">
+            <label class="difficulty-control" for="recommendation-difficulty">
+              <span>원하는 난이도</span>
+              <select id="recommendation-difficulty">
+                <option value="전체">전체 난이도</option>
+                <option value="쉬움">쉬움</option>
+                <option value="보통">보통</option>
+                <option value="어려움">어려움</option>
+              </select>
+            </label>
+            <button id="refresh-recommendations" class="refresh-button" type="button">
+              다른 문제 더 받기 <span aria-hidden="true">↻</span>
+            </button>
+          </div>
+          <p id="recommendation-message" class="recommendation-message" role="status" hidden></p>
           <div id="problem-list" class="problem-list"></div>
           <div class="screen-actions">
             <button id="back-to-analysis" class="secondary-button" type="button">분석 결과 보기</button>

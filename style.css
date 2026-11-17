@@ -111,6 +111,13 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 .recommendation-card { border-top: 5px solid var(--green); }
 .recommendation-card h2 { margin: 0 0 10px; font: 700 22px/1.3 Georgia, "Noto Serif KR", serif; }
 .recommendation-reason { margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.recommendation-controls { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin: 0 0 18px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #f7faf7; }
+.difficulty-control { display: grid; gap: 6px; width: min(230px, 100%); color: var(--green-dark); font-size: 12px; font-weight: 800; }
+.difficulty-control select { height: 42px; background: white; }
+.refresh-button { min-height: 42px; padding: 0 16px; border: 1px solid var(--green); border-radius: 8px; color: white; background: var(--green); font-weight: 800; cursor: pointer; }
+.refresh-button:hover { background: var(--green-dark); }
+.refresh-button:disabled { cursor: wait; opacity: .65; }
+.recommendation-message { margin: 0 0 14px; padding: 11px 13px; border-radius: 8px; color: var(--green-dark); background: var(--green-pale); font-size: 12px; line-height: 1.5; }
 .problem-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .problem-item { padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: white; }
 .problem-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
@@ -147,6 +154,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
   .field-row, .choice-grid, .side-panel, .analysis-layout { grid-template-columns: 1fr; }
   .analysis-layout .action-block { grid-column: auto; }
   .screen-actions { flex-direction: column-reverse; }
+  .recommendation-controls { align-items: stretch; flex-direction: column; }
+  .difficulty-control { width: 100%; }
+  .refresh-button { width: 100%; }
   .screen-actions .primary-button, .screen-actions .secondary-button { width: 100%; }
   .section-heading { display: block; }
 }
