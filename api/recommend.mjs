@@ -4,12 +4,12 @@ export default async function handler(request, response) {
   }
 
   const body = request.body || {};
-  if (typeof body.unit !== "string" || typeof body.problemType !== "string" || typeof body.concept !== "string") {
+  if (typeof body.subject !== "string" || typeof body.unit !== "string" || typeof body.problemType !== "string" || typeof body.concept !== "string") {
     return response.status(400).json({ error: "추천에 필요한 정보가 부족합니다." });
   }
 
   try {
-    const problems = await fetchProblems();
+    const problems = await fetchProblems(body.subject);
     const excluded = new Set(Array.isArray(body.excludeCodes) ? body.excludeCodes.slice(0, 500) : []);
     const difficulty = ["쉬움", "보통", "어려움"].includes(body.difficulty) ? body.difficulty : "전체";
     const keywords = [body.unit, body.problemType, body.concept]
@@ -42,12 +42,13 @@ export default async function handler(request, response) {
   }
 }
 
-async function fetchProblems() {
+async function fetchProblems(subject) {
   const url = process.env.SUPABASE_URL?.replace(/\/$/, "");
   const key = process.env.SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) throw new Error("Supabase 설정이 없습니다.");
-  const fields = "code,unit,problem_type,difficulty,question,hint,answer,explanation,tags,source_name,source_url,license";
-  const result = await fetch(`${url}/rest/v1/problems?select=${fields}&limit=500`, {
+  const fields = "code,subject,unit,problem_type,difficulty,question,hint,answer,explanation,tags,source_name,source_url,license";
+  const subjectFilter = encodeURIComponent(`eq.${subject}`);
+  const result = await fetch(`${url}/rest/v1/problems?select=${fields}&subject=${subjectFilter}&limit=500`, {
     headers: { apikey: key, Authorization: `Bearer ${key}` },
   });
   if (!result.ok) throw new Error(`Supabase 요청 실패 (${result.status})`);
@@ -69,6 +70,9 @@ function scoreProblem(problem, keywords, input) {
 }
 
 function inferDifficulty(problem) {
+  if (problem.subject !== "수학") {
+    return problem.difficulty === "응용" ? "어려움" : problem.difficulty;
+  }
   const question = String(problem.question || "");
   let complexity = 0;
   complexity += Math.min(3, (question.match(/\^/g) || []).length);

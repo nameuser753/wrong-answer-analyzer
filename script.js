@@ -185,6 +185,7 @@ async function loadMoreRecommendations() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        subject: latestWrongAnswer.subject,
         unit: latestWrongAnswer.unit,
         problemType: latestWrongAnswer.problemType,
         concept: latestAnalysis.concept,

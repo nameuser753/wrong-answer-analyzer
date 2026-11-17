@@ -158,7 +158,7 @@ async function handleAnalysis(request, response) {
 
 async function handleRecommendation(request, response) {
   const body = await readJsonBody(request, 1024 * 1024);
-  if (typeof body.unit !== "string" || typeof body.problemType !== "string" || typeof body.concept !== "string") {
+  if (typeof body.subject !== "string" || typeof body.unit !== "string" || typeof body.problemType !== "string" || typeof body.concept !== "string") {
     sendJson(response, 400, { error: "추천에 필요한 정보가 부족합니다." });
     return;
   }
@@ -186,8 +186,9 @@ async function recommendProblems(input, analysis, options = {}) {
     throw new Error("Supabase 환경변수가 설정되지 않았습니다.");
   }
 
-  const fields = "code,unit,problem_type,difficulty,question,hint,answer,explanation,tags,source_name,source_url,license";
-  const databaseResponse = await fetch(`${supabaseUrl}/rest/v1/problems?select=${fields}&limit=500`, {
+  const fields = "code,subject,unit,problem_type,difficulty,question,hint,answer,explanation,tags,source_name,source_url,license";
+  const subjectFilter = encodeURIComponent(`eq.${input.subject}`);
+  const databaseResponse = await fetch(`${supabaseUrl}/rest/v1/problems?select=${fields}&subject=${subjectFilter}&limit=500`, {
     headers: {
       apikey: supabaseKey,
       Authorization: `Bearer ${supabaseKey}`,
@@ -272,6 +273,9 @@ function normalizeText(value) {
 }
 
 function inferDifficulty(problem) {
+  if (problem.subject !== "수학") {
+    return problem.difficulty === "응용" ? "어려움" : problem.difficulty;
+  }
   const question = String(problem.question || "");
   let complexity = 0;
   complexity += Math.min(3, (question.match(/\^/g) || []).length);

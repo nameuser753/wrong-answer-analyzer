@@ -85,8 +85,9 @@ async function recommendProblems(input, analysis) {
   const url = process.env.SUPABASE_URL?.replace(/\/$/, "");
   const key = process.env.SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) throw new Error("Supabase 설정이 없습니다.");
-  const fields = "code,unit,problem_type,difficulty,question,hint,answer,explanation,tags,source_name,source_url,license";
-  const dbResponse = await fetch(`${url}/rest/v1/problems?select=${fields}&limit=500`, {
+  const fields = "code,subject,unit,problem_type,difficulty,question,hint,answer,explanation,tags,source_name,source_url,license";
+  const subjectFilter = encodeURIComponent(`eq.${input.subject}`);
+  const dbResponse = await fetch(`${url}/rest/v1/problems?select=${fields}&subject=${subjectFilter}&limit=500`, {
     headers: { apikey: key, Authorization: `Bearer ${key}` },
   });
   if (!dbResponse.ok) throw new Error(`Supabase 요청 실패 (${dbResponse.status})`);
@@ -126,6 +127,9 @@ function normalize(value) { return String(value || "").toLowerCase().replace(/\s
 function clean(value, max) { return value.trim().slice(0, max); }
 
 function inferDifficulty(problem) {
+  if (problem.subject !== "수학") {
+    return problem.difficulty === "응용" ? "어려움" : problem.difficulty;
+  }
   const question = String(problem.question || "");
   let complexity = 0;
   complexity += Math.min(3, (question.match(/\^/g) || []).length);
