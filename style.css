@@ -117,6 +117,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 .problem-head h3 { margin: 0; font-size: 14px; }
 .difficulty { padding: 4px 8px; border-radius: 999px; color: var(--green-dark); background: var(--green-pale); font-size: 10px; font-weight: 800; }
 .problem-question { margin: 0; font-size: 13px; line-height: 1.65; white-space: pre-wrap; }
+.problem-question mjx-container,
+.hint-details mjx-container,
+.answer-details mjx-container { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding-block: 0.15rem; }
 .problem-item details { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; }
 .problem-item summary { color: var(--green); font-weight: 800; cursor: pointer; }
 .problem-item details p { margin: 8px 0 0; color: #526058; line-height: 1.55; white-space: pre-wrap; }

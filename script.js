@@ -148,7 +148,17 @@ function renderAnalysis(result, wrongAnswer) {
     problemList.append(article);
   });
 
+  renderMath(resultCard, problemList);
   showScreen(2);
+}
+
+function renderMath(...containers) {
+  if (!window.MathJax?.typesetPromise) return;
+
+  window.MathJax.typesetClear?.(containers);
+  window.MathJax.typesetPromise(containers).catch((error) => {
+    console.error("수식 표시 중 문제가 발생했습니다.", error);
+  });
 }
 
 function showScreen(stepNumber) {
